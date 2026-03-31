@@ -20,6 +20,42 @@ def load_users():
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="users.xlsx file not found")
 
+def validate_grade_columns(df):
+    required_columns = {
+        "student_id",
+        "student_name",
+        "course_code",
+        "coninuous_assessment",
+        "exam_grade",
+        "final_grade"
+    }
+
+    if not required_columns.issubset(df.columns):
+        raise HTTPException(
+            status_code=500,
+            detail="grades.xlsx file is missing one or more required columns"
+        )
+    
+def filter_grades(df, student_id, course_code = None):
+    filtered_df = df[df["student_id"] == student_id]
+
+    if course_code:
+        filtered_df = filtered_df[filtered_df["course_code"] == course_code]
+    return filtered_df
+
+
+def handle_empty_grades(filtered_df, identifier_name: str, identifier_value: str, course_code: str = None):
+    if filtered_df.empty:
+        if course_code:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No grades found for {identifier_name} {identifier_value} in course {course_code}"
+            )
+        raise HTTPException(
+            status_code=404,
+            detail=f"No grades found for {identifier_name} {identifier_value}"
+        )
+
 
 @app.get("/health")
 def health():
@@ -28,44 +64,11 @@ def health():
 
 @app.get("/grades") 
 def get_grades(student_id: int, course_code: str = None):
-    try:
-        df = pd.read_excel("app/grades.xlsx")
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="grades.xlsx file not found")
-    
-    required_columns = {
-        "student_id",
-        "student_name",
-        "course_code",
-        "continuous_assessment",
-        "exam_grade",
-        "final_grade"
-    }
+    df = load_grades()
+    validate_grade_columns(df)
 
-    if not required_columns.issubset(df.columns):
-        raise HTTPException(
-            status_code=500, 
-            detail="grades.xlsx file is missing one or more required columns: student_id, student_name, course_code, continuous_assessment, exam_grade, final_grade"
-        )
-    
-    #First filter by student id
-    filtered_df = df[df["student_id"] == student_id]
-
-    #Then filter by course_code if provided
-    if course_code:
-        filtered_df = filtered_df[filtered_df["course_code"] == course_code]
-
-    if filtered_df.empty:
-        if course_code:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"No grades found for student_id {student_id} in course {course_code}"
-            )
-        else:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"No grades found for student_id {student_id}"
-            )
+    filtered_df = filter_grades(df, student_id, course_code)
+    handle_empty_grades(filtered_df, "student_id", student_id, course_code)
 
     return filtered_df.to_dict(orient="records")
 
@@ -149,4 +152,3 @@ in my case the path is: C:\\Users\\HP\\Desktop\\chatbot> uvicorn app.main:app --
 
 '''
 
-    
