@@ -121,9 +121,89 @@ def my_grades(user_code: str, course_code: str = None):
 
     return filtered_df.to_dict(orient="records")
 
+@app.get("/chat")
+def chat(message: str):
+    parts = message.strip().split()
+
+    if not parts: 
+        raise HTTPException(status_code=400, detail="Empty message")
+    
+    command = parts[0].lower()
+
+    if command == "help":
+        return{
+            "response":(
+                "Available commands:\n"
+                "help\n"
+                "login <user_code>\n"
+                "grades <user_code>\n"
+                "grades <user_code> <course_code>"
+            )
+        }
+    elif command == "login":
+        if len(parts) < 2:
+            raise HTTPException(status_code=400, detail="Usage: login <user_code>")
+        
+        user_code = parts[1]
+        df_users = load_users()
+
+        user = df_users[df_users["user_code"] == user_code]
+
+        if user.empty:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        student_name = user.iloc[0]["student_name"]
+        student_id = int(user.iloc[0]["student_id"])
+
+        return {
+            "response": f"Login successful for {student_name} (student_id: {student_id})"
+        }
+    
+    elif command == "grades":
+        if len(parts) < 2:
+            raise HTTPException(status_code=400, detail="Usage: grades <user_code> [course_code]")
+        
+        user_code = parts[1]
+        course_code = parts[2] if len(parts) >= 3 else None
+
+        df_users = load_users()
+        user = df_users[df_users["user_code"] == user_code]
+
+        if user.empty:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        student_id = int(user.iloc[0]["student_id"])
+        student_name = user.iloc[0]["student_name"]
+
+        df = load_grades()
+        validate_grade_columns(df)
+
+        filtered_df = filter_grades(df, student_id, course_code)
+        handle_empty_grades(filtered_df, "user_code", user_code, course_code)
+
+        lines = [f"Grades for {student_name}:"]
+        for _, row in filtered_df.iterrows():
+            lines.append(
+                f"{row['course_code']} ->"
+                f"CA: {row['continuous_assessment']}, "
+                f"Exam:{row['exam_grade']}"
+                f"Final:{row['final_grade']}"
+            )
+
+        return {
+            
+            "response": "\n".join(lines)
+        }
+    else:
+        raise HTTPException(status_code=400,
+                            detail="Unknown command. Type 'help' to see available commands."
+                            )
+    
+
+
 '''
 the path on terminal should be the root of the project, where the app folder is located run the following command to start the server: uvicorn app.main:app --reload
 
 in my case the path is: C:\\Users\\HP\\Desktop\\chatbot> python -m uvicorn app.main:app --reload
 
-''' 
+'''
