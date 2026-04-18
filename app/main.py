@@ -13,19 +13,27 @@ app = FastAPI()
 #Later this can be replaced by wechat openid
 #Now users are stored in users.xlsx instead of hardcoded
 
+
 def load_users():
     try:
-        df = pd.read_excel("app/users.xlsx")
-        return df
+        return pd.read_excel("app/users.xlsx")
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="users.xlsx file not found")
+
+
+def load_grades():
+    try:
+        return pd.read_excel("app/grades.xlsx")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="grades.xlsx file not found")
+
 
 def validate_grade_columns(df):
     required_columns = {
         "student_id",
         "student_name",
         "course_code",
-        "coninuous_assessment",
+        "continuous_assessment",
         "exam_grade",
         "final_grade"
     }
@@ -35,12 +43,14 @@ def validate_grade_columns(df):
             status_code=500,
             detail="grades.xlsx file is missing one or more required columns"
         )
-    
-def filter_grades(df, student_id, course_code = None):
+
+
+def filter_grades(df, student_id, course_code=None):
     filtered_df = df[df["student_id"] == student_id]
 
     if course_code:
         filtered_df = filtered_df[filtered_df["course_code"] == course_code]
+
     return filtered_df
 
 
@@ -62,7 +72,7 @@ def health():
     return {"ok": True}
 
 
-@app.get("/grades") 
+@app.get("/grades")
 def get_grades(student_id: int, course_code: str = None):
     df = load_grades()
     validate_grade_columns(df)
@@ -82,7 +92,7 @@ def login(user_code: str):
 
     if user.empty:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     student_id = int(user.iloc[0]["student_id"])
 
     return {
@@ -103,52 +113,17 @@ def my_grades(user_code: str, course_code: str = None):
 
     student_id = int(user.iloc[0]["student_id"])
 
-    try:
-        df = pd.read_excel("app/grades.xlsx")
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="grades.xlsx file not found")
+    df = load_grades()
+    validate_grade_columns(df)
 
-    required_columns = {
-        "student_id",
-        "student_name",
-        "course_code",
-        "continuous_assessment",
-        "exam_grade",
-        "final_grade"
-    }
-
-    if not required_columns.issubset(df.columns):
-        raise HTTPException(
-            status_code=500, 
-            detail="grades.xlsx file is missing required columns"
-        )
-
-    #First filter by student id
-    filtered_df = df[df["student_id"] == student_id]
-
-    #Then filter by course_code if provided
-    if course_code:
-        filtered_df = filtered_df[filtered_df["course_code"] == course_code]
-
-    if filtered_df.empty:
-        if course_code:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"No grades found for user_code {user_code} in course {course_code}"
-            )
-        else:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"No grades found for user_code {user_code}"
-            )
+    filtered_df = filter_grades(df, student_id, course_code)
+    handle_empty_grades(filtered_df, "user_code", user_code, course_code)
 
     return filtered_df.to_dict(orient="records")
-
 
 '''
 the path on terminal should be the root of the project, where the app folder is located run the following command to start the server: uvicorn app.main:app --reload
 
-in my case the path is: C:\\Users\\HP\\Desktop\\chatbot> uvicorn app.main:app --reload
+in my case the path is: C:\\Users\\HP\\Desktop\\chatbot> python -m uvicorn app.main:app --reload
 
-'''
-
+''' 
