@@ -125,14 +125,14 @@ def my_grades(user_code: str, course_code: str = None):
 def chat(message: str):
     parts = message.strip().split()
 
-    if not parts: 
+    if not parts:
         raise HTTPException(status_code=400, detail="Empty message")
-    
+
     command = parts[0].lower()
 
     if command == "help":
-        return{
-            "response":(
+        return {
+            "response": (
                 "Available commands:\n"
                 "help\n"
                 "login <user_code>\n"
@@ -140,64 +140,87 @@ def chat(message: str):
                 "grades <user_code> <course_code>"
             )
         }
+
     elif command == "login":
         if len(parts) < 2:
             raise HTTPException(status_code=400, detail="Usage: login <user_code>")
-        
-        user_code = parts[1]
-        df_users = load_users()
 
-        user = df_users[df_users["user_code"] == user_code]
+        user_input = " ".join(parts[1:]).strip().lower()
+
+        df_users = load_users()
+        df_users["user_code_clean"] = (
+            df_users["user_code"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
+
+        user = df_users[df_users["user_code_clean"] == user_input]
 
         if user.empty:
             raise HTTPException(status_code=404, detail="User not found")
-        
+
         student_name = user.iloc[0]["student_name"]
         student_id = int(user.iloc[0]["student_id"])
 
         return {
             "response": f"Login successful for {student_name} (student_id: {student_id})"
         }
-    
+
     elif command == "grades":
         if len(parts) < 2:
             raise HTTPException(status_code=400, detail="Usage: grades <user_code> [course_code]")
-        
-        user_code = parts[1]
-        course_code = parts[2] if len(parts) >= 3 else None
+
+        # assume last word is course code only if it is fully uppercase or contains digits
+        possible_last = parts[-1]
+        if len(parts) >= 3 and (possible_last.isupper() or any(ch.isdigit() for ch in possible_last)):
+            course_code = possible_last.strip().upper()
+            user_input = " ".join(parts[1:-1]).strip().lower()
+        else:
+            course_code = None
+            user_input = " ".join(parts[1:]).strip().lower()
 
         df_users = load_users()
-        user = df_users[df_users["user_code"] == user_code]
+        df_users["user_code_clean"] = (
+            df_users["user_code"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
+
+        user = df_users[df_users["user_code_clean"] == user_input]
 
         if user.empty:
             raise HTTPException(status_code=404, detail="User not found")
-        
+
         student_id = int(user.iloc[0]["student_id"])
         student_name = user.iloc[0]["student_name"]
 
         df = load_grades()
         validate_grade_columns(df)
+        df["course_code"] = df["course_code"].astype(str).str.strip().str.upper()
 
         filtered_df = filter_grades(df, student_id, course_code)
-        handle_empty_grades(filtered_df, "user_code", user_code, course_code)
+        handle_empty_grades(filtered_df, "user_code", user_input, course_code)
 
         lines = [f"Grades for {student_name}:"]
         for _, row in filtered_df.iterrows():
             lines.append(
-                f"{row['course_code']} ->"
+                f"{row['course_code']} -> "
                 f"CA: {row['continuous_assessment']}, "
-                f"Exam:{row['exam_grade']}"
-                f"Final:{row['final_grade']}"
+                f"Exam: {row['exam_grade']}, "
+                f"Final: {row['final_grade']}"
             )
 
         return {
-            
             "response": "\n".join(lines)
         }
+
     else:
-        raise HTTPException(status_code=400,
-                            detail="Unknown command. Type 'help' to see available commands."
-                            )
+        raise HTTPException(
+            status_code=400,
+            detail="Unknown command. Type 'help' to see available commands."
+        )
     
 
 

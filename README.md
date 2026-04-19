@@ -101,7 +101,7 @@ df.to_dict(orient="records")
 
 ### What it does
 
-* Converts table → list of dictionaries
+* Converts table to a list of dictionaries
 * Required for API response
 
 ---
