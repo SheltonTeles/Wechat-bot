@@ -123,29 +123,34 @@ def my_grades(user_code: str, course_code: str = None):
 
 @app.get("/chat")
 def chat(message: str):
-    parts = message.strip().split()
+    message = message.strip()
 
-    if not parts:
+    if not message:
         raise HTTPException(status_code=400, detail="Empty message")
 
-    command = parts[0].lower()
+    parts = message.split()
+    lowered_parts = [part.lower() for part in parts]
 
-    if command == "help":
+    if "help" in lowered_parts:
         return {
             "response": (
                 "Available commands:\n"
                 "help\n"
                 "login <user_code>\n"
                 "grades <user_code>\n"
-                "grades <user_code> <course_code>"
+                "grades <user_code> <course_code>\n"
+                "You can also try:\n"
+                "show grades <user_code>\n"
+                "get grades <user_code> <course_code>"
             )
         }
 
-    elif command == "login":
-        if len(parts) < 2:
-            raise HTTPException(status_code=400, detail="Usage: login <user_code>")
+    elif "login" in lowered_parts:
+        login_index = lowered_parts.index("login")
+        user_input = " ".join(parts[login_index + 1:]).strip().lower()
 
-        user_input = " ".join(parts[1:]).strip().lower()
+        if not user_input:
+            raise HTTPException(status_code=400, detail="Usage: login <user_code>")
 
         df_users = load_users()
         df_users["user_code_clean"] = (
@@ -167,18 +172,30 @@ def chat(message: str):
             "response": f"Login successful for {student_name} (student_id: {student_id})"
         }
 
-    elif command == "grades":
-        if len(parts) < 2:
-            raise HTTPException(status_code=400, detail="Usage: grades <user_code> [course_code]")
+    elif "grades" in lowered_parts:
+        grades_index = lowered_parts.index("grades")
+        remaining_parts = parts[grades_index + 1:]
 
-        # assume last word is course code only if it is fully uppercase or contains digits
-        possible_last = parts[-1]
-        if len(parts) >= 3 and (possible_last.isupper() or any(ch.isdigit() for ch in possible_last)):
+        # remove filler words if they appear after "grades"
+        filler_words = {"for", "of", "my"}
+        remaining_parts = [p for p in remaining_parts if p.lower() not in filler_words]
+
+        if not remaining_parts:
+            raise HTTPException(
+                status_code=400,
+                detail="Usage: grades <user_code> [course_code]"
+            )
+
+        possible_last = remaining_parts[-1]
+
+        if len(remaining_parts) >= 2 and (
+            possible_last.isupper() or any(ch.isdigit() for ch in possible_last)
+        ):
             course_code = possible_last.strip().upper()
-            user_input = " ".join(parts[1:-1]).strip().lower()
+            user_input = " ".join(remaining_parts[:-1]).strip().lower()
         else:
             course_code = None
-            user_input = " ".join(parts[1:]).strip().lower()
+            user_input = " ".join(remaining_parts).strip().lower()
 
         df_users = load_users()
         df_users["user_code_clean"] = (

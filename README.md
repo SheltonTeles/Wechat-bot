@@ -438,3 +438,88 @@ It is:
 * structure
 * logic
 * communication between systems
+
+## Chatbot Command Parsing
+
+### Goal
+
+Allow the chatbot to understand more natural messages, not only strict commands.
+
+### Examples that work
+
+* `help`
+* `please help`
+* `can you help`
+* `grades shelton`
+* `show my grades shelton`
+* `show grades for shelton`
+
+### How it works
+
+1. The message is split into words
+2. A lowercase version of the words is created
+3. The chatbot looks for keywords such as `help`, `login`, or `grades`
+4. Extra filler words such as `my` and `for` are ignored
+5. The remaining words are used to identify the user and optional course code
+
+### Key functions and methods used
+
+#### `split()`
+
+Splits a string into a list of words.
+
+Example:
+
+```python
+"show grades shelton".split()
+# ['show', 'grades', 'shelton']
+```
+
+#### List comprehension
+
+```python
+lowered_parts = [part.lower() for part in parts]
+```
+
+Creates a lowercase version of each word.
+
+#### `in`
+
+Checks whether a keyword exists in the list.
+
+Example:
+
+```python
+if "grades" in lowered_parts:
+```
+
+#### `index()`
+
+Finds the position of a keyword in the list.
+
+Example:
+
+```python
+grades_index = lowered_parts.index("grades")
+```
+
+#### `join()`
+
+Combines a list of words back into one string.
+
+Example:
+
+```python
+" ".join(parts[1:])
+```
+
+### Lesson learned
+
+A chatbot does not need AI to be useful.
+A rule-based chatbot can already understand commands by combining:
+
+* keyword detection
+* filtering
+* input normalization
+* response formatting
+    
