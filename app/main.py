@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 
 """
@@ -13,6 +14,14 @@ app = FastAPI()
 #Later this can be replaced by wechat openid
 #Now users are stored in users.xlsx instead of hardcoded
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def load_users():
     try:

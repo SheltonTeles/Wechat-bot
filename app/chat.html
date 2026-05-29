@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Chatbot</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f5f5f5;
+        }
+        #chat {
+            width: 400px;
+            margin: 50px auto;
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            height: 500px;
+            overflow-y: scroll;
+        }
+        .msg {
+            margin: 10px;
+            padding: 8px;
+            border-radius: 8px;
+            max-width: 70%;
+        }
+        .user {
+            background: #9fe6a0;
+            margin-left: auto;
+            text-align: right;
+        }
+        .bot {
+            background: #e5e5ea;
+        }
+        #inputBox {
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="chat"></div>
+
+<div style="text-align:center;">
+    <input id="inputBox" placeholder="Type message..." />
+    <button onclick="sendMessage()">Send</button>
+</div>
+
+<script>
+async function sendMessage() {
+    const input = document.getElementById("inputBox");
+    const message = input.value;
+
+    if (!message) return;
+
+    addMessage(message, "user");
+
+    const response = await fetch(
+        `http://127.0.0.1:8000/chat?message=${encodeURIComponent(message)}`
+    );
+
+    const data = await response.json();
+
+    addMessage(data.response, "bot");
+
+    input.value = "";
+}
+
+function addMessage(text, type) {
+    const chat = document.getElementById("chat");
+    const msg = document.createElement("div");
+
+    msg.classList.add("msg", type);
+    msg.innerText = text;
+
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+}
+</script>
+
+</body>
+</html>
