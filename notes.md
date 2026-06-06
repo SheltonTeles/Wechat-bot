@@ -313,5 +313,309 @@ Store users in an external file (users.xlsx).
 - No need to modify code
 - More realistic system design
 
-### Lesson learned
-Data should be separated from application logic.
+Chatbot Endpoint
+Goal
+
+Allow users to interact with the system using chat-like commands instead of directly calling API endpoints.
+
+Example:
+
+help
+login shelton
+grades shelton
+grades shelton MATH101
+Endpoint
+@app.get("/chat")
+def chat(message: str):
+
+The endpoint receives a text message and interprets it as a command.
+
+Message Processing
+split()
+parts = message.strip().split()
+
+Example:
+
+"grades shelton".split()
+
+Result:
+
+["grades", "shelton"]
+strip()
+
+Removes extra spaces at the beginning and end.
+
+Example:
+
+"  grades shelton  ".strip()
+
+Result:
+
+"grades shelton"
+lower()
+command = parts[0].lower()
+
+Converts text to lowercase.
+
+Example:
+
+"HELP".lower()
+
+Result:
+
+"help"
+
+This allows commands to be case-insensitive.
+
+Command Routing
+
+The chatbot checks which command the user entered.
+
+Example:
+
+if command == "help":
+elif command == "login":
+elif command == "grades":
+
+This pattern is called command routing.
+
+Example Flow
+
+User sends:
+
+grades shelton
+
+Processing:
+
+Message received
+↓
+Split into words
+↓
+Detect command "grades"
+↓
+Find student in users.xlsx
+↓
+Find grades in grades.xlsx
+↓
+Build response text
+↓
+Return response
+Lesson Learned
+
+A chatbot is essentially:
+
+Input
+↓
+Interpretation
+↓
+Business Logic
+↓
+Response
+
+The same backend logic can later be connected to:
+
+WeChat
+DingTalk
+Telegram
+Web UI
+
+without changing the core system.
+
+Refactoring the Code
+Goal
+
+Avoid repeating the same code multiple times.
+
+Before
+
+Both /grades and /my-grades contained:
+
+pd.read_excel(...)
+required_columns = {...}
+filtered_df = ...
+
+Repeated code is harder to maintain.
+
+After
+
+Created helper functions:
+
+load_users()
+def load_users():
+
+Loads data from:
+
+users.xlsx
+load_grades()
+def load_grades():
+
+Loads data from:
+
+grades.xlsx
+validate_grade_columns()
+def validate_grade_columns(df):
+
+Checks whether all required columns exist.
+
+filter_grades()
+def filter_grades(df, student_id, course_code=None):
+
+Filters the DataFrame.
+
+handle_empty_grades()
+def handle_empty_grades(...):
+
+Returns a 404 error when no records are found.
+
+Benefits
+Less duplicated code
+Easier debugging
+Easier maintenance
+More professional project structure
+Frontend Chat Interface
+Goal
+
+Create a user interface that looks like a chat application.
+
+Architecture
+User
+↓
+Chat UI (HTML/CSS/JavaScript)
+↓
+/chat endpoint
+↓
+FastAPI
+↓
+Excel files
+↓
+Response
+fetch()
+
+The frontend sends messages using:
+
+fetch(...)
+
+Example:
+
+const response = await fetch(
+    `http://127.0.0.1:8000/chat?message=${message}`
+);
+async / await
+
+Allows JavaScript to wait for the server response.
+
+Example:
+
+const response = await fetch(...)
+
+Without await, the code would continue before the response arrives.
+
+JSON Response
+
+FastAPI returns:
+
+{
+  "response": "Grades for Shelton..."
+}
+
+JavaScript converts it into an object:
+
+const data = await response.json();
+Lesson Learned
+
+The frontend does not directly access Excel files.
+
+Instead:
+
+Frontend
+↓
+API
+↓
+Data
+
+This separation is a fundamental principle of modern web applications.
+
+Project Architecture
+Current System
+Student
+↓
+Chat Interface
+↓
+FastAPI Backend
+↓
+Command Parser
+↓
+Excel Storage
+↓
+Response
+Technologies Used
+FastAPI
+
+Used to create REST API endpoints.
+
+pandas
+
+Used to:
+
+Read Excel files
+Filter records
+Process tabular data
+Excel (.xlsx)
+
+Used as a lightweight database for prototyping.
+
+Files:
+
+users.xlsx
+grades.xlsx
+HTML
+
+Creates the user interface.
+
+CSS
+
+Styles the chat interface.
+
+JavaScript
+
+Handles communication between frontend and backend.
+
+Future Improvements
+Authentication
+
+Replace:
+
+user_code
+
+with:
+
+WeChat OpenID
+DingTalk User ID
+University Account
+Database
+
+Replace Excel with:
+
+SQLite
+PostgreSQL
+MySQL
+AI Features
+
+Allow natural language queries such as:
+
+What is my Math grade?
+
+instead of:
+
+grades shelton MATH101
+
+using an LLM or NLP model.
+
+Platform Integration
+
+Potential integrations:
+
+WeChat
+DingTalk
+Telegram
+AstrBot
